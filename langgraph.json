@@ -1,0 +1,10 @@
+{
+    "dependencies": [
+    "."
+    ],
+    "graphs": {
+      "CBT Graph": "./source/app.py:app"
+    },
+    "env": ".env",
+   "python_version": "3.12"
+  }
