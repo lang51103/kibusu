@@ -1,166 +1,107 @@
-# CRM Agent AI Powered Marketing
 
-This project demonstrates how to build an intelligent Customer Relationship Management (CRM) system using AI agents, LangGraph, and real customer data.
+# CRM Agent — AI-Powered Marketing Assistant
 
-## 🏗️ Project Architecture
+An experimental CRM agent that uses LangGraph, LangChain adapters, and an MCP-based toolset to analyze customer data, build targeted email campaigns, and run supervised marketing workflows.
 
-![alt text](CRM_AGETN_LANGGRAPH.png)
+Key features:
+- Smart customer segmentation using RFM (Recency, Frequency, Monetary)
+- Human-in-the-loop protected tool calls for sensitive actions (create/send campaigns)
+- Streamlit-based UI for interactive conversations with the assistant
+- Configurable MCP servers for custom tools and integrations
 
-### LangGraph graph
-![alt text](graph_visualization.png)
+Files of interest:
+- [src/nova/graph.py](src/nova/graph.py) — application graph and agent orchestration
+- [src/nova/prompts.py](src/nova/prompts.py) — system prompt and DB schema description
+- [frontend/ui.py](frontend/ui.py) — Streamlit UI that runs the assistant
+- [src/nova/my_mcp/config.py](src/nova/my_mcp/config.py) — MCP configuration loader
+- [db/generate_data_tables.py](db/generate_data_tables.py) — helper to generate sample CSVs
 
-## Core Capabilities
+Requirements
+-----------
+- Python 3.13+
+- PostgreSQL (e.g., Supabase) for production use
+- API credentials for your chosen LLM (Gemini in examples)
+- See `pyproject.toml` for the main dependencies
 
-This system provides an intelligent approach to customer relationship management through:
-
-- **Smart Customer Insights**: Deep analysis of purchasing patterns and customer behavior
-- **Automated Email Marketing**: Generate tailored email campaigns with personalized messaging
-- **Advanced Segmentation**: Implement RFM (Recency, Frequency, Monetary) methodology to classify customers into actionable groups
-- **Manual Oversight Required**: All critical operations like campaign deployment require explicit human authorization
-- **Live Transaction Processing**: Direct integration with your retail database
-- **Multi-Strategy Campaigns**:
-  - **Win-Back Initiatives**: Reconnect with dormant customer accounts
-  - **Referral Programs**: Activate your most valuable customers as brand advocates
-  - **Retention Efforts**: Acknowledge and reward loyal patron base
-
-## System Requirements
-
-Your environment needs:
-
-- **Python 3.13 or higher**
-- **PostgreSQL database** (Supabase recommended)
-- **Gemini API credentials**
-- **Git** version control
-
-## Installation Guide
-
-For the quickest deployment path, follow these steps:
-
-This application utilizes `uv` for package management. Installation instructions for `uv` are available at [docs.astral.sh/uv/guides/install-python/](https://docs.astral.sh/uv/guides/install-python/).
-
-### Step 1: Repository Setup
+Quick start
+-----------
+1. Clone repository and install dependencies (project uses `uv` in examples — adapt to your tooling):
 
 ```bash
-git clone
-cd crm-agent
-uv sync  # Installs all required packages
+git clone <repo-url>
+cd CRM-ai-agent
+uv sync
 ```
 
-### Step 2: Environment Configuration
+2. Copy and edit environment variables:
 
 ```bash
 cp .env.example .env
-# Update .env file with your Gemini credentials and database URI
+# Edit .env to set GEMINI_API_KEY, DATABASE_URL, and any MCP server env vars
 ```
 
-### Step 3: Database Initialization
-
-Create a free tier account at [supabase.com](https://supabase.com)
-
-### Step 4: Launch Application
+3. Prepare sample data (optional):
 
 ```bash
-cd frontend && uv run python chat_local.py  # Initialize Ralph interface
+python db/generate_data_tables.py
 ```
 
-## Usage Instructions
-
-### Launching the Interface
-
-Navigate to the frontend and execute:
+4. Start the Streamlit UI:
 
 ```bash
-cd frontend
-uv run python chat_local.py
+# from project root
+python -m streamlit run frontend/ui.py
 ```
 
-Ralph will greet you with an introduction:
+Or (if you use `uv`):
 
-```
----- 🤖 Assistant ----
-
-Hi there! I'm Ralph, your customer service agent and marketing expert. I'm here to help you understand your customers better and create targeted marketing campaigns that drive results.
-
-I have access to your CRM database with customer information, transaction history, and RFM analysis. I can help you:
-
-🎯 Analyze customer behavior and segments
-📧 Create personalized marketing campaigns
-📊 Generate insights from your customer data
-✉️ Send targeted emails to specific customer groups
-
-What would you like to work on today?
+```bash
+uv run python -m streamlit run frontend/ui.py
 ```
 
-### Sample Queries
+Running the agent locally
+-------------------------
+- The agent graph is constructed in [src/nova/graph.py](src/nova/graph.py). To generate the visualization (PNG), run:
 
-Test Ralph's capabilities with these prompts:
-
-**Analyzing Top Performers**:
-
-```
-"Display our top 5 customers ranked by total revenue"
+```bash
+python -m src.nova.graph
 ```
 
-**Segmentation Overview**:
+- The Streamlit UI sends messages to the graph using the `AgentState` model. Protected tool calls (e.g., `create_campaign`, `send_campaign_email`) trigger a human review interrupt.
 
-```
-"Provide a breakdown of customer distribution across RFM segments"
-```
+Configuration
+-------------
+- Update `.env` with your LLM API key and database URL.
+- MCP servers are configured in [src/nova/my_mcp/mcp_config.json](src/nova/my_mcp/mcp_config.json). The loader at [src/nova/my_mcp/config.py](src/nova/my_mcp/config.py) resolves env vars and relative paths.
 
-**Campaign Development**:
+Data model
+----------
+This project expects the following tables (see `prompts.py` for full schema): `customers`, `transactions`, `items`, `rfm`, `marketing_campaigns`, and `campaign_emails`.
 
-```
-"Build a re-engagement strategy for customers inactive over 6 months"
-```
+Examples and suggested prompts
+------------------------------
+- "Display top 5 customers by revenue"
+- "Create a re-engagement campaign for customers inactive over 6 months"
+- "Draft personalized appreciation emails for Champions" 
 
-**Email Distribution**:
+Development notes
+-----------------
+- The LangGraph graph composes LLM calls and MCP tool calls via a `StateGraph`.
+- `ralph_system_prompt` (in [src/nova/prompts.py](src/nova/prompts.py)) contains DB schema, email guidelines, and marketing rules the assistant follows.
+- Add or customize tools by editing your MCP servers and their server-side handlers (see `mcp_config.json` and your MCP server implementations).
 
-```
-"Draft and send appreciation emails to our champion-tier customers"
-```
+Security and human oversight
+---------------------------
+- Tool calls that perform side effects are protected by default and require manual approval via the Streamlit UI interrupt flow.
+- Keep secret keys out of source control; use `.env` and platform secrets for production.
 
-## Data Architecture
+Next steps
+----------
+- Verify environment variables in `.env` and `mcp_config.json`.
+- Start the Streamlit UI and test sample prompts.
+- Extend MCP servers with custom marketing actions as needed.
 
-### RFM Segmentation Framework
+License
+-------
+This repository does not include a license file. Add one (for example, MIT) if you intend to publish.
 
-The system categorizes customers using RFM scoring:
-
-- **🏆 Champion Tier** (555): Elite customers with optimal recency, frequency, and spending metrics
-- **🆕 New Active Users** (5XX): Recently engaged customer base
-- **🔄 Regular Purchasers** (X5X): High-frequency transaction customers
-- **💰 High-Value Accounts** (XX5): Premium spending customers
-- **⚠️ Lapsed Customers** (1XX): Accounts showing purchase inactivity
-- **👥 General Audience**: Remaining customer segments
-
-### Data Base tables
-
-Primary database tables include:
-
-- **customers**: Profile information and communication preferences
-- **transactions**: Historical purchase records
-- **items**: Product inventory with specifications and pricing
-- **rfm**: Segmentation scores and classifications
-- **marketing_campaigns**: Campaign metadata and performance
-- **campaign_emails**: Message delivery logs and engagement metrics
-
-## Extending Functionality
-
-Add custom tools to `src/ralph/mymcp/servers/marketing_server.py`:
-
-```python
-@mcp.tool()
-async def your_custom_function(parameter: str) -> str:
-    """Documentation for your custom tool."""
-    # Implementation logic
-    return "Function output"
-```
-
-## Technical Foundation
-
-### Technologies Implemented
-
-- **LangGraph**: Agent orchestration framework with state management
-- **MCP (Model Context Protocol)**: Standardized AI tool communication layer
-- **RFM Methodology**: Data-driven customer classification approach
-- **Human-in-the-loop Design**: Supervised AI decision-making architecture
-- **PostgreSQL**: Enterprise-grade relational data storage
